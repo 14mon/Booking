@@ -1,3 +1,25 @@
+### Get Profile
+**URL:**
+`http://localhost:5098/v1/Users`
+
+
+### Change Password
+**URL:**
+`http://localhost:5098/v1/Auth/change-password`
+
+**Payload:**
+```json
+{
+  "email": "eimyaatmon759@gmail.com",
+  "oldPassword": "Mon123!@#",
+  "newPassword": "Mon321#@!"
+}
+```
+
+### Reset Password
+**URL:**
+`http://localhost:5098/v1/Auth/password-reset?Email=eimyatmon759%40gmail.com`
+
 ### Register Payload
 
 **URL:**
@@ -81,5 +103,14 @@
   "cancelTime": "2025-06-21T12:57:26.739638Z"
 }
 ```
+### Active Package List for each Country
+**URL:**
+`http://localhost:5098/v1/Packages?$filter=IsActive eq true and PaymentGateway/CountryId eq 9dde76cb-b052-4365-b528-ec2ecc13997b and PaymentGateway/IsActive eq true&$expand=PaymentGateway($expand=Country)`
 
----
+
+### User can see the available class schedule list for each country with class info and can book the class
+**URL**
+`http://localhost:5098/v1/Classes?$filter=Status eq 'active' and IsFull eq false and CountryId eq 9dde76cb-b052-4365-b528-ec2ecc13997b&$expand=Country`
+
+
+
