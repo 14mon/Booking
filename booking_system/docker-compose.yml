@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test123
+      POSTGRES_DB: booking
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data # <-- this line mounts the volume
+
+volumes:
+  pgdata: # <-- this declares the named volume
