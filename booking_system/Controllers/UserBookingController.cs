@@ -1,16 +1,19 @@
+using booking_system.Controllers;
 using booking_system.Data;
 using booking_system.Models;
+using booking_system.Redis;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 [ApiController]
 [Route("v1/[controller]")]
-public class UserBookingController : ControllerBase
+public class UserBookingController : BaseController
 {
     private readonly DataContext _db;
     private readonly ILogger<UserBookingController> _logger;
 
-    public UserBookingController(DataContext dbContext, ILogger<UserBookingController> logger)
+    public UserBookingController(DataContext dbContext, ILogger<UserBookingController> logger, RedisService redisService) : base(redisService)
     {
         _logger = logger;
         _db = dbContext;
@@ -21,58 +24,77 @@ public class UserBookingController : ControllerBase
     [Route("Class")]
     public async Task<IActionResult> Booking(BookRequest request)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId);
-        if (user == null)
+        string lockKey = $"booking_lock:{request.ClassId}";
+        string lockValue = Guid.NewGuid().ToString();
+        TimeSpan lockExpiry = TimeSpan.FromSeconds(3);
+
+        bool lockAcquired = await RedisWriteDb.StringSetAsync(lockKey, lockValue, lockExpiry, When.NotExists);
+        if (!lockAcquired)
+            return Conflict("Please wait, another booking is in progress.");
+
+
+        try
         {
-            return NotFound("User not found.");
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var classCredit = await _db.Classes
+                .FirstOrDefaultAsync(c => c.Id == request.ClassId && c.Status == ClassStatus.active);
+
+            if (classCredit == null)
+            {
+                return NotFound("Class not found or not active.");
+            }
+
+            if (user.CreditBalance < classCredit.RequiredCredit)
+            {
+                return BadRequest("Insufficient credit to book this class.");
+            }
+
+            // Prepare credit history entry
+            UserCreditHistory creditHistory = new()
+            {
+                UserId = request.UserId,
+                CreditAmount = classCredit.RequiredCredit,
+                Type = CreditType.book,
+            };
+
+            // Determine booking status based on class fullness
+            BookingStatus bookingStatus = classCredit.IsFull ? BookingStatus.waiting : BookingStatus.booked;
+
+            ClassBooking booking = new()
+            {
+                UserId = request.UserId,
+                UserCreditId = creditHistory.Id,
+                Status = bookingStatus,
+                BookAt = DateTime.UtcNow,
+                ClassId = request.ClassId
+            };
+
+            // Save changes: add credit history and booking to db context
+            _db.UserCreditHistories.Add(creditHistory);
+            _db.ClassBookings.Add(booking);
+
+            // Optionally, reduce user credit balance if booking confirmed (not waiting)
+            if (!classCredit.IsFull)
+            {
+                user.CreditBalance -= classCredit.RequiredCredit;
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Ok($"Booking {(bookingStatus == BookingStatus.booked ? "successful" : "waiting list")}.");
         }
-
-        var classCredit = await _db.Classes
-            .FirstOrDefaultAsync(c => c.Id == request.ClassId && c.Status == ClassStatus.active);
-
-        if (classCredit == null)
+        finally
         {
-            return NotFound("Class not found or not active.");
+
+            var current = await RedisReadDb.StringGetAsync(lockKey);
+            if (current == lockValue)
+                await RedisWriteDb.KeyDeleteAsync(lockKey);
         }
-
-        if (user.CreditBalance < classCredit.RequiredCredit)
-        {
-            return BadRequest("Insufficient credit to book this class.");
-        }
-
-        // Prepare credit history entry
-        UserCreditHistory creditHistory = new()
-        {
-            UserId = request.UserId,
-            CreditAmount = classCredit.RequiredCredit,
-            Type = CreditType.book,
-        };
-
-        // Determine booking status based on class fullness
-        BookingStatus bookingStatus = classCredit.IsFull ? BookingStatus.waiting : BookingStatus.booked;
-
-        ClassBooking booking = new()
-        {
-            UserId = request.UserId,
-            UserCreditId = creditHistory.Id,
-            Status = bookingStatus,
-            BookAt = DateTime.UtcNow,
-            ClassId = request.ClassId
-        };
-
-        // Save changes: add credit history and booking to db context
-        _db.UserCreditHistories.Add(creditHistory);
-        _db.ClassBookings.Add(booking);
-
-        // Optionally, reduce user credit balance if booking confirmed (not waiting)
-        if (!classCredit.IsFull)
-        {
-            user.CreditBalance -= classCredit.RequiredCredit;
-        }
-
-        await _db.SaveChangesAsync();
-
-        return Ok($"Booking {(bookingStatus == BookingStatus.booked ? "successful" : "waiting list")}.");
     }
 
     [HttpPost]
