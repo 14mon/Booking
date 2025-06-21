@@ -12,8 +12,8 @@ using booking_system.Data;
 namespace booking_system.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250621124704_payment")]
-    partial class payment
+    [Migration("20250621175457_nullable")]
+    partial class nullable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,6 +39,9 @@ namespace booking_system.Migrations
 
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsFull")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("MaxParticipants")
                         .HasColumnType("integer");
@@ -83,9 +86,6 @@ namespace booking_system.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsRefund")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -369,6 +369,9 @@ namespace booking_system.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("CreditBalance")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -424,16 +427,13 @@ namespace booking_system.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("CreditAmount")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsExpired")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("RefundId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("TotalCredit")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("TransactionId")
+                    b.Property<Guid?>("RefundId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -448,9 +448,6 @@ namespace booking_system.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RefundId")
-                        .IsUnique();
-
-                    b.HasIndex("TransactionId")
                         .IsUnique();
 
                     b.HasIndex("UserId");
@@ -571,14 +568,7 @@ namespace booking_system.Migrations
                     b.HasOne("booking_system.Models.Refund", "Refund")
                         .WithOne("UserCreditHistory")
                         .HasForeignKey("booking_system.Models.UserCreditHistory", "RefundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("booking_system.Models.Transaction", "Transaction")
-                        .WithOne("UserCreditHistory")
-                        .HasForeignKey("booking_system.Models.UserCreditHistory", "TransactionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("booking_system.Models.User", "User")
                         .WithMany("UserCreditHistories")
@@ -587,8 +577,6 @@ namespace booking_system.Migrations
                         .IsRequired();
 
                     b.Navigation("Refund");
-
-                    b.Navigation("Transaction");
 
                     b.Navigation("User");
                 });
@@ -628,11 +616,6 @@ namespace booking_system.Migrations
                 });
 
             modelBuilder.Entity("booking_system.Models.Refund", b =>
-                {
-                    b.Navigation("UserCreditHistory");
-                });
-
-            modelBuilder.Entity("booking_system.Models.Transaction", b =>
                 {
                     b.Navigation("UserCreditHistory");
                 });

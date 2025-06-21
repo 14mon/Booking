@@ -6,16 +6,16 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace booking_system.Migrations
 {
     /// <inheritdoc />
-    public partial class Third : Migration
+    public partial class nullable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<string>(
-                name: "PlanId",
-                table: "Packages",
-                type: "text",
-                nullable: false,
+            migrationBuilder.AlterColumn<Guid>(
+                name: "RefundId",
+                table: "UserCreditHistories",
+                type: "uuid",
+                nullable: true,
                 oldClrType: typeof(Guid),
                 oldType: "uuid");
         }
@@ -24,12 +24,14 @@ namespace booking_system.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<Guid>(
-                name: "PlanId",
-                table: "Packages",
+                name: "RefundId",
+                table: "UserCreditHistories",
                 type: "uuid",
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "text");
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
+                oldClrType: typeof(Guid),
+                oldType: "uuid",
+                oldNullable: true);
         }
     }
 }

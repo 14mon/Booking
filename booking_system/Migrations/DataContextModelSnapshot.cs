@@ -256,7 +256,7 @@ namespace booking_system.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ClassBookingId")
+                    b.Property<Guid?>("BookingId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -282,7 +282,7 @@ namespace booking_system.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClassBookingId")
+                    b.HasIndex("BookingId")
                         .IsUnique();
 
                     b.ToTable("Refunds");
@@ -430,7 +430,7 @@ namespace booking_system.Migrations
                     b.Property<bool>("IsExpired")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("RefundId")
+                    b.Property<Guid?>("RefundId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -516,7 +516,7 @@ namespace booking_system.Migrations
                 {
                     b.HasOne("booking_system.Models.ClassBooking", "ClassBooking")
                         .WithOne("Refund")
-                        .HasForeignKey("booking_system.Models.Refund", "ClassBookingId")
+                        .HasForeignKey("booking_system.Models.Refund", "BookingId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("ClassBooking");
@@ -565,8 +565,7 @@ namespace booking_system.Migrations
                     b.HasOne("booking_system.Models.Refund", "Refund")
                         .WithOne("UserCreditHistory")
                         .HasForeignKey("booking_system.Models.UserCreditHistory", "RefundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("booking_system.Models.User", "User")
                         .WithMany("UserCreditHistories")

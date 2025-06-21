@@ -53,7 +53,7 @@ public class Function
                 // 1. Create Refund
                 var refund = new booking_system.Models.Refund
                 {
-                    ClassBookingId = booking.Id,
+                    BookingId = booking.Id,
                     Type = RedundType.waitlist_refunded,
                     RefundAmount = creditAmount,
                     RefundedAt = DateTime.UtcNow,

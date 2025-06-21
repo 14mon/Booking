@@ -95,7 +95,7 @@ namespace booking_system.Data
             modelBuilder.Entity<ClassBooking>()
                       .HasOne(g => g.Refund)
                       .WithOne(t => t.ClassBooking)
-                      .HasForeignKey<Refund>(t => t.ClassBookingId)
+                      .HasForeignKey<Refund>(t => t.BookingId)
                       .OnDelete(DeleteBehavior.Cascade);
 
             //Refund

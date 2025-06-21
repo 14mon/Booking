@@ -78,13 +78,12 @@ CreatedAt datetime [default: `CURRENT_TIMESTAMP`]
 UpdatedAt datetime [default: `CURRENT_TIMESTAMP`]
 }
 
-Table UserCreditHistory {
+Table UserCreditHistories {
 Id uuid [pk]
 UserId uuid
-TransactionId uuid [ref: - Transactions.Id] // 💡 Added: link to transaction that caused the credit entry
+CreditAmount int [not null]
 RefundId uuid [ref: - Refunds.Id] // 💡 Optional: for refund traceability
-TotalCredit int [not null]
-Type enum('purchase', 'refund') [not null]
+Type enum('purchase','book', 'refund') [not null]
 CreatedAt datetime [default: `CURRENT_TIMESTAMP`]
 UpdatedAt datetime [default: `CURRENT_TIMESTAMP`]
 }
@@ -97,6 +96,7 @@ RequiredCredits int [default: 1]
 StartTime datetime [not null]
 EndTime datetime [not null]
 MaxParticipants int
+IsFull bool [default:false]
 Status enum('active', 'cancelled', 'completed') [default: 'active']
 CreatedAt datetime [default: `CURRENT_TIMESTAMP`]
 UpdatedAt datetime [default: `CURRENT_TIMESTAMP`]
@@ -106,7 +106,7 @@ Table ClassBookings {
 Id uuid [pk]
 ClassId uuid [not null, ref: > Class.Id]
 UserId uuid
-UserCreditId uuid [ref: > UserCreditHistory.Id]
+UserCreditId uuid [ref: > UserCreditHistories.Id]
 BookingStatus enum('waiting', 'booked', 'cancelledByUser', 'cancelByClass') [default: 'waiting']
 BookedAt datetime
 CancelledAt datetime

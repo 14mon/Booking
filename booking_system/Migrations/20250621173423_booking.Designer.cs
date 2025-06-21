@@ -12,8 +12,8 @@ using booking_system.Data;
 namespace booking_system.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250621153145_userCredit")]
-    partial class userCredit
+    [Migration("20250621173423_booking")]
+    partial class booking
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

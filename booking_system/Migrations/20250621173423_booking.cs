@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace booking_system.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class booking : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -54,6 +54,7 @@ namespace booking_system.Migrations
                     EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     MaxParticipants = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
+                    IsFull = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -97,8 +98,10 @@ namespace booking_system.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    CreditBalance = table.Column<int>(type: "integer", nullable: false),
                     Phone = table.Column<string>(type: "text", nullable: true),
-                    Email = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "text", nullable: false),
                     CountryId = table.Column<Guid>(type: "uuid", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "date", nullable: true),
                     Address = table.Column<string>(type: "text", nullable: true),
@@ -108,6 +111,7 @@ namespace booking_system.Migrations
                     FirebaseUserId = table.Column<string>(type: "text", nullable: false),
                     LoginType = table.Column<string>(type: "text", nullable: true),
                     IsEmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                    VerificationToken = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -133,7 +137,7 @@ namespace booking_system.Migrations
                     GatewayId = table.Column<Guid>(type: "uuid", nullable: false),
                     Price = table.Column<float>(type: "real", nullable: false),
                     Currency = table.Column<string>(type: "text", nullable: false),
-                    PlanId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlanId = table.Column<string>(type: "text", nullable: false),
                     TermsAndCondition = table.Column<string>(type: "text", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     Credit = table.Column<int>(type: "integer", nullable: false),
@@ -158,12 +162,13 @@ namespace booking_system.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ExpiredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UserCreditId = table.Column<Guid>(type: "uuid", nullable: false),
-                    BookingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ExpiredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Platform = table.Column<string>(type: "text", nullable: true),
                     PackageId = table.Column<Guid>(type: "uuid", nullable: false),
                     Amount = table.Column<float>(type: "real", nullable: false),
                     Currency = table.Column<string>(type: "text", nullable: true),
+                    RequestedPlan = table.Column<string>(type: "text", nullable: true),
+                    AppliedPlan = table.Column<string>(type: "text", nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     GateWayOrderId = table.Column<string>(type: "text", nullable: true),
                     GateRefCode = table.Column<string>(type: "text", nullable: true),
@@ -206,7 +211,6 @@ namespace booking_system.Migrations
                     Status = table.Column<int>(type: "integer", nullable: false),
                     BookAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CancelledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsRefund = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -258,9 +262,8 @@ namespace booking_system.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TransactionId = table.Column<Guid>(type: "uuid", nullable: false),
                     RefundId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TotalCredit = table.Column<int>(type: "integer", nullable: false),
+                    CreditAmount = table.Column<int>(type: "integer", nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
                     IsExpired = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -273,12 +276,6 @@ namespace booking_system.Migrations
                         name: "FK_UserCreditHistories_Refunds_RefundId",
                         column: x => x.RefundId,
                         principalTable: "Refunds",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserCreditHistories_Transactions_TransactionId",
-                        column: x => x.TransactionId,
-                        principalTable: "Transactions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -348,12 +345,6 @@ namespace booking_system.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserCreditHistories_TransactionId",
-                table: "UserCreditHistories",
-                column: "TransactionId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_UserCreditHistories_UserId",
                 table: "UserCreditHistories",
                 column: "UserId");
@@ -384,6 +375,18 @@ namespace booking_system.Migrations
                 table: "ClassBookings");
 
             migrationBuilder.DropTable(
+                name: "Transactions");
+
+            migrationBuilder.DropTable(
+                name: "GatewayRawEvents");
+
+            migrationBuilder.DropTable(
+                name: "Packages");
+
+            migrationBuilder.DropTable(
+                name: "PaymentGateways");
+
+            migrationBuilder.DropTable(
                 name: "Classes");
 
             migrationBuilder.DropTable(
@@ -393,22 +396,10 @@ namespace booking_system.Migrations
                 name: "Refunds");
 
             migrationBuilder.DropTable(
-                name: "Transactions");
-
-            migrationBuilder.DropTable(
                 name: "ClassBookings");
 
             migrationBuilder.DropTable(
-                name: "GatewayRawEvents");
-
-            migrationBuilder.DropTable(
-                name: "Packages");
-
-            migrationBuilder.DropTable(
                 name: "Users");
-
-            migrationBuilder.DropTable(
-                name: "PaymentGateways");
 
             migrationBuilder.DropTable(
                 name: "Countries");

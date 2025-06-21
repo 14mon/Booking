@@ -57,6 +57,7 @@ public class UserBookingController : ControllerBase
             UserCreditId = creditHistory.Id,
             Status = bookingStatus,
             BookAt = DateTime.UtcNow,
+            ClassId = request.ClassId
         };
 
         // Save changes: add credit history and booking to db context
@@ -78,53 +79,72 @@ public class UserBookingController : ControllerBase
     [Route("Cancel")]
     public async Task<IActionResult> Cancel(CancelRequest request)
     {
-        var booking = await _db.ClassBookings.FirstOrDefaultAsync(b => b.Id == request.BookingId && b.UserId == request.UserId);
+        var booking = await _db.ClassBookings
+            .Include(b => b.User)                  // Include User for updating credit balance
+            .Include(b => b.UserCreditHistory)     // Include UserCreditHistory for refund amount
+            .FirstOrDefaultAsync(b => b.Id == request.BookingId && b.UserId == request.UserId);
+
         if (booking == null)
-        {
             return NotFound("Booking not found.");
-        }
 
         if (booking.Status == BookingStatus.cancelledbyClass || booking.Status == BookingStatus.cancelledbyUser)
-        {
             return BadRequest("Booking is already cancelled.");
-        }
 
-        var classStartTime = booking.Class!.StartTime;
+        var classEntity = await _db.Classes.FirstOrDefaultAsync(c => c.Id == booking.ClassId);
+        if (classEntity == null)
+            return NotFound("Class not found.");
+
+        DateTime classStartTime = classEntity.StartTime;
         var hoursBeforeStart = (classStartTime - request.CancelTime).TotalHours;
-
         bool isEligibleForRefund = hoursBeforeStart >= 4;
 
         booking.CancelledAt = request.CancelTime;
         booking.Status = BookingStatus.cancelledbyUser;
 
+        // Save the booking update first
+        await _db.SaveChangesAsync();
 
         if (isEligibleForRefund)
         {
+            // Make sure UserCreditHistory exists and CreditAmount is valid
+            if (booking.UserCreditHistory == null)
+            {
+                return BadRequest("No credit history available for refund.");
+            }
+
+            int refundAmount = booking.UserCreditHistory.CreditAmount;
+
             // Create Refund record
             var refund = new Refund
             {
-                ClassBookingId = booking.Id,
-                Type = RedundType.cancelled_before_4hr,  // Assuming refund is by credit, adjust as needed
-                RefundAmount = booking.UserCreditHistory!.CreditAmount,
-                RefundCurrency = null,     // Null if refund is credit
+                BookingId = booking.Id,
+                Type = RedundType.cancelled_before_4hr,  // Fix typo: RedundType -> RefundType?
+                RefundAmount = refundAmount,
+                RefundCurrency = null, // Ensure your DB allows null or provide a currency code
                 RefundedAt = DateTime.UtcNow,
                 Note = "Refund due to cancellation 4 hours before class start."
             };
             _db.Refunds.Add(refund);
+
+            // Save here to generate refund.Id (if Identity PK)
+            await _db.SaveChangesAsync();
 
             // Create UserCreditHistory record for refund
             var refundCreditHistory = new UserCreditHistory
             {
                 UserId = booking.UserId,
                 RefundId = refund.Id,
-                CreditAmount = booking.UserCreditHistory.CreditAmount,
+                CreditAmount = refundAmount,
                 Type = CreditType.refund,
                 IsExpired = false,
+                CreatedAt = DateTime.UtcNow,  // Add CreatedAt if your model requires it
             };
             _db.UserCreditHistories.Add(refundCreditHistory);
 
-            var user = booking.User!;
-            user.CreditBalance += booking.UserCreditHistory.CreditAmount;
+            // Update user's credit balance
+            booking!.User!.CreditBalance += refundAmount;
+
+            await _db.SaveChangesAsync();
 
             return Ok(new
             {
@@ -132,13 +152,12 @@ public class UserBookingController : ControllerBase
             });
         }
 
-        await _db.SaveChangesAsync();
-
         return Ok(new
         {
             Message = "Booking cancelled, no refund due to cancellation within 4 hours of class start."
         });
     }
+
 
     public class BookRequest
     {
