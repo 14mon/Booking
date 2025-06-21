@@ -113,4 +113,13 @@
 `http://localhost:5098/v1/Classes?$filter=Status eq 'active' and IsFull eq false and CountryId eq 9dde76cb-b052-4365-b528-ec2ecc13997b&$expand=Country`
 
 
+### User Waiting List
+**URL**
+`http://localhost:5098/v1/ClassBookings?$filter=Status eq 'waiting'`
+
+### Can't book class list query from mobile
+**URL**
+`http://localhost:5098/v1/Classes?$filter=IsFull eq true&$expand=ClassBookings,Country`
+
+
 
